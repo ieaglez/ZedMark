@@ -49,3 +49,35 @@ Run tests:
 ```bash
 CLANG_MODULE_CACHE_PATH="$PWD/.build/clang-module-cache" swift test --disable-sandbox
 ```
+
+
+## Mac App Store readiness
+
+This repository includes an Xcode project for App Store distribution:
+
+```bash
+open ZedMark.xcodeproj
+```
+
+The Xcode target uses:
+
+- Bundle ID: `com.jeffzhang.ZedMark`
+- Version: `0.1.0`
+- Build: `1`
+- App Sandbox enabled
+- User-selected file read/write access
+- App-scoped security-scoped bookmarks for recent files
+
+You can validate the Xcode build without signing:
+
+```bash
+./script/build_xcode_app.sh
+```
+
+To archive for App Store Connect, set your Apple Developer Team ID:
+
+```bash
+DEVELOPMENT_TEAM=YOURTEAMID ./script/archive_app_store.sh
+```
+
+After archiving, open Xcode Organizer and upload the archive to App Store Connect. The app still needs App Store Connect metadata, screenshots, privacy details, and review submission.

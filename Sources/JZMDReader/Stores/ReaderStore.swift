@@ -2,7 +2,9 @@ import AppKit
 import Foundation
 import SwiftUI
 import UniformTypeIdentifiers
+#if canImport(JZMDReaderCore)
 import JZMDReaderCore
+#endif
 
 struct MarkdownDocument: Identifiable, Equatable {
     let id = UUID()
@@ -21,9 +23,15 @@ struct MarkdownDocument: Identifiable, Equatable {
 
 struct RecentFile: Identifiable, Hashable {
     var url: URL
+    var bookmarkData: Data?
     var id: String { url.path }
     var title: String { url.lastPathComponent }
     var folder: String { url.deletingLastPathComponent().path }
+}
+
+private struct StoredRecentFile: Codable {
+    var path: String
+    var bookmarkData: Data?
 }
 
 
@@ -120,6 +128,7 @@ final class ReaderStore: ObservableObject {
     private let renderer = MarkdownRenderer()
     private var watcher: FileWatcher?
     private var pdfExporter: PDFExporter?
+    private var activeSecurityScopedURL: URL?
     private var observers: [NSObjectProtocol] = []
 
     init() {
@@ -137,6 +146,7 @@ final class ReaderStore: ObservableObject {
 
     deinit {
         watcher?.stop()
+        activeSecurityScopedURL?.stopAccessingSecurityScopedResource()
         observers.forEach { NotificationCenter.default.removeObserver($0) }
     }
 
@@ -190,6 +200,7 @@ final class ReaderStore: ObservableObject {
         }
 
         do {
+            activateSecurityScope(for: url)
             let text = try readText(url: url)
             let modified = modificationDate(for: url)
             document = MarkdownDocument(url: url, text: text, lastModified: modified)
@@ -229,7 +240,7 @@ final class ReaderStore: ObservableObject {
     }
 
     func openRecent(_ file: RecentFile) {
-        openURL(file.url)
+        openURL(resolvedURL(for: file) ?? file.url)
     }
 
 
@@ -273,6 +284,13 @@ final class ReaderStore: ObservableObject {
         exportFeedback = .exporting(.html)
         statusMessage = copy.exporting(.html)
 
+        let didStartAccessingDestination = destination.startAccessingSecurityScopedResource()
+        defer {
+            if didStartAccessingDestination {
+                destination.stopAccessingSecurityScopedResource()
+            }
+        }
+
         do {
             try renderResult.html.write(to: destination, atomically: true, encoding: .utf8)
             let record = ExportRecord(kind: .html, url: destination, date: Date())
@@ -301,9 +319,13 @@ final class ReaderStore: ObservableObject {
         exportFeedback = .exporting(.pdf)
         statusMessage = copy.exporting(.pdf)
 
+        let didStartAccessingDestination = destination.startAccessingSecurityScopedResource()
         let exporter = PDFExporter()
         pdfExporter = exporter
         exporter.export(html: renderResult.html, baseURL: baseURL, to: destination) { [weak self] result in
+            if didStartAccessingDestination {
+                destination.stopAccessingSecurityScopedResource()
+            }
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.pdfExporter = nil
@@ -358,6 +380,40 @@ final class ReaderStore: ObservableObject {
         return try String(contentsOf: url, usedEncoding: &encoding)
     }
 
+    private func activateSecurityScope(for url: URL) {
+        let standardizedURL = url.standardizedFileURL
+        if activeSecurityScopedURL?.standardizedFileURL == standardizedURL {
+            return
+        }
+
+        activeSecurityScopedURL?.stopAccessingSecurityScopedResource()
+        activeSecurityScopedURL = nil
+
+        if standardizedURL.startAccessingSecurityScopedResource() {
+            activeSecurityScopedURL = standardizedURL
+        }
+    }
+
+    private func bookmarkData(for url: URL) -> Data? {
+        try? url.bookmarkData(options: [.withSecurityScope], includingResourceValuesForKeys: nil, relativeTo: nil)
+    }
+
+    private func resolvedURL(for file: RecentFile) -> URL? {
+        guard let bookmarkData = file.bookmarkData else { return file.url }
+        var isStale = false
+        do {
+            let url = try URL(
+                resolvingBookmarkData: bookmarkData,
+                options: [.withSecurityScope],
+                relativeTo: nil,
+                bookmarkDataIsStale: &isStale
+            )
+            return url
+        } catch {
+            return FileManager.default.fileExists(atPath: file.url.path) ? file.url : nil
+        }
+    }
+
     private func renderDocument() {
         guard let document else {
             renderResult = .empty
@@ -383,18 +439,39 @@ final class ReaderStore: ObservableObject {
     }
 
     private func addRecentFile(_ url: URL) {
-        var urls = [url] + recentFiles.map(\.url).filter { $0 != url }
-        urls = Array(urls.prefix(12))
-        recentFiles = urls.map(RecentFile.init(url:))
-        UserDefaults.standard.set(urls.map(\.path), forKey: Keys.recentFiles)
+        let current = RecentFile(url: url.standardizedFileURL, bookmarkData: bookmarkData(for: url))
+        var files = [current] + recentFiles.filter { $0.url.standardizedFileURL != current.url.standardizedFileURL }
+        files = Array(files.prefix(12))
+        recentFiles = files
+        persistRecentFiles()
+    }
+
+    private func persistRecentFiles() {
+        let records = recentFiles.map { StoredRecentFile(path: $0.url.path, bookmarkData: $0.bookmarkData) }
+        if let data = try? JSONEncoder().encode(records) {
+            UserDefaults.standard.set(data, forKey: Keys.recentFiles)
+        }
     }
 
     private func loadRecentFiles() {
-        let paths = UserDefaults.standard.stringArray(forKey: Keys.recentFiles) ?? []
+        let defaults = UserDefaults.standard
+        if let data = defaults.data(forKey: Keys.recentFiles),
+           let records = try? JSONDecoder().decode([StoredRecentFile].self, from: data) {
+            recentFiles = records.compactMap { record in
+                let fallbackURL = URL(fileURLWithPath: record.path)
+                let resolved = resolvedURL(for: RecentFile(url: fallbackURL, bookmarkData: record.bookmarkData)) ?? fallbackURL
+                guard FileManager.default.fileExists(atPath: resolved.path) else { return nil }
+                return RecentFile(url: resolved, bookmarkData: record.bookmarkData)
+            }
+            return
+        }
+
+        let paths = defaults.stringArray(forKey: Keys.recentFiles) ?? []
         recentFiles = paths
             .map(URL.init(fileURLWithPath:))
             .filter { FileManager.default.fileExists(atPath: $0.path) }
-            .map(RecentFile.init(url:))
+            .map { RecentFile(url: $0, bookmarkData: bookmarkData(for: $0)) }
+        persistRecentFiles()
     }
 
     private func observeAppEvents() {

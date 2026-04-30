@@ -2,3 +2,6 @@
 /dist/
 .DS_Store
 /Resources/AppIcon.iconset/
+*.xcuserstate
+xcuserdata/
+*.xcarchive

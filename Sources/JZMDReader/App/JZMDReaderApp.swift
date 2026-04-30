@@ -1,6 +1,8 @@
 import AppKit
 import SwiftUI
+#if canImport(JZMDReaderCore)
 import JZMDReaderCore
+#endif
 
 @main
 struct JZMDReaderApp: App {
