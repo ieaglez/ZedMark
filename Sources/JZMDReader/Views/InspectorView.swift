@@ -1,5 +1,7 @@
 import SwiftUI
+#if canImport(JZMDReaderCore)
 import JZMDReaderCore
+#endif
 
 struct InspectorView: View {
     @ObservedObject var store: ReaderStore

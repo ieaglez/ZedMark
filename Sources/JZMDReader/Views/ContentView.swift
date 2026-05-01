@@ -1,6 +1,8 @@
 import SwiftUI
 import UniformTypeIdentifiers
+#if canImport(JZMDReaderCore)
 import JZMDReaderCore
+#endif
 
 struct ContentView: View {
     @ObservedObject var store: ReaderStore

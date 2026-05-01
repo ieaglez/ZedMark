@@ -1,5 +1,7 @@
 import SwiftUI
+#if canImport(JZMDReaderCore)
 import JZMDReaderCore
+#endif
 
 struct SidebarView: View {
     @ObservedObject var store: ReaderStore
