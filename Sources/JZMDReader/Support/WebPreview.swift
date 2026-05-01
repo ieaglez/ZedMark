@@ -40,7 +40,9 @@ struct WebPreview: NSViewRepresentable {
             if loadedHTML != html {
                 loadedHTML = html
                 pendingScrollTarget = scrollTarget
-                webView.loadHTMLString(html, baseURL: baseURL)
+                // TestFlight/App Store sandboxing can leave WebKit blank when a
+                // user-selected file URL is used as the HTML base URL.
+                webView.loadHTMLString(html, baseURL: nil)
                 return
             }
 

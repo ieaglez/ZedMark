@@ -10,7 +10,7 @@
 - Availability: All countries or regions
 - Bundle ID: com.jeffzhang.ZedMark
 - Version: 0.1.0
-- Build: 1
+- Build: 2
 - Copyright: Copyright 2026 Jeff Zhang. All rights reserved.
 
 ## Promotional Text
@@ -117,4 +117,3 @@ Recommended screenshots:
 Recommended first screenshot caption for your own tracking:
 
 Open, preview, review, and export Markdown in a native macOS workspace.
-

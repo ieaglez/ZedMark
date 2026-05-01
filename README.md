@@ -63,7 +63,7 @@ The Xcode target uses:
 
 - Bundle ID: `com.jeffzhang.ZedMark`
 - Version: `0.1.0`
-- Build: `1`
+- Build: `2`
 - App Sandbox enabled
 - User-selected file read/write access
 - App-scoped security-scoped bookmarks for recent files
