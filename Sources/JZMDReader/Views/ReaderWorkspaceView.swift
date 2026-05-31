@@ -15,7 +15,7 @@ struct ReaderWorkspaceView: View {
                     html: store.renderResult.html,
                     baseURL: store.baseURL,
                     scrollTarget: store.selectedHeadingID,
-                    zoom: store.previewZoom
+                    zoom: store.effectiveZoom
                 )
                 .clipShape(RoundedRectangle(cornerRadius: ReaderDesign.panelRadius))
                 .overlay(
@@ -63,7 +63,7 @@ private struct EmptyReaderView: View {
                     .font(.system(size: 22, weight: .medium))
                     .foregroundStyle(ReaderDesign.primaryText)
                 Text(copy.emptySubtitle)
-                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    .font(.system(size: 12.5, weight: .regular))
                     .foregroundStyle(ReaderDesign.secondaryText)
             }
 

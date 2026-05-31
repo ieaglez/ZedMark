@@ -14,13 +14,12 @@ try? FileManager.default.removeItem(at: icnsURL)
 try FileManager.default.createDirectory(at: iconsetURL, withIntermediateDirectories: true)
 
 struct IconColor {
-    static let peacock = NSColor(calibratedRed: 0.020, green: 0.420, blue: 0.455, alpha: 1)
-    static let peacockLight = NSColor(calibratedRed: 0.055, green: 0.690, blue: 0.788, alpha: 1)
-    static let ink = NSColor(calibratedRed: 0.035, green: 0.173, blue: 0.204, alpha: 1)
-    static let paper = NSColor(calibratedRed: 0.975, green: 0.972, blue: 0.948, alpha: 1)
-    static let paperEdge = NSColor(calibratedRed: 0.790, green: 0.850, blue: 0.840, alpha: 1)
-    static let paperFold = NSColor(calibratedRed: 0.800, green: 0.965, blue: 0.952, alpha: 1)
-    static let paperLine = NSColor(calibratedRed: 0.685, green: 0.755, blue: 0.748, alpha: 1)
+    // Bright, light tile — white fading to a faint cool grey.
+    static let topBackground = NSColor(srgbRed: 1.000, green: 1.000, blue: 1.000, alpha: 1)     // #ffffff
+    static let bottomBackground = NSColor(srgbRed: 0.929, green: 0.945, blue: 0.965, alpha: 1)  // #edf1f6
+    static let tileEdge = NSColor(srgbRed: 0.851, green: 0.875, blue: 0.902, alpha: 1)          // #d9dfe6
+    // A single fresh teal accent — the app's one colour.
+    static let glyph = NSColor(srgbRed: 0.055, green: 0.690, blue: 0.788, alpha: 1)             // #0eb0c9
 }
 
 func scaled(_ value: CGFloat, _ scale: CGFloat) -> CGFloat {
@@ -61,23 +60,18 @@ func fillRoundedRect(x: CGFloat, y: CGFloat, width: CGFloat, height: CGFloat, ra
     path.fill()
 }
 
-func zMarkPath(scale: CGFloat, offsetX: CGFloat = 0, offsetY: CGFloat = 0) -> NSBezierPath {
+func strokePolyline(_ pts: [CGPoint], width: CGFloat, color: NSColor, scale: CGFloat) {
+    guard let first = pts.first else { return }
     let path = NSBezierPath()
-    path.move(to: point(298 + offsetX, 700 + offsetY, scale))
-    path.line(to: point(670 + offsetX, 700 + offsetY, scale))
-    path.line(to: point(600 + offsetX, 614 + offsetY, scale))
-    path.line(to: point(458 + offsetX, 614 + offsetY, scale))
-    path.line(to: point(300 + offsetX, 404 + offsetY, scale))
-    path.line(to: point(560 + offsetX, 404 + offsetY, scale))
-    path.line(to: point(486 + offsetX, 312 + offsetY, scale))
-    path.line(to: point(214 + offsetX, 312 + offsetY, scale))
-    path.line(to: point(286 + offsetX, 404 + offsetY, scale))
-    path.line(to: point(430 + offsetX, 404 + offsetY, scale))
-    path.line(to: point(588 + offsetX, 614 + offsetY, scale))
-    path.line(to: point(226 + offsetX, 614 + offsetY, scale))
-    path.close()
+    path.lineCapStyle = .round
     path.lineJoinStyle = .round
-    return path
+    path.lineWidth = scaled(width, scale)
+    path.move(to: point(first.x, first.y, scale))
+    for p in pts.dropFirst() {
+        path.line(to: point(p.x, p.y, scale))
+    }
+    color.setStroke()
+    path.stroke()
 }
 
 func drawIcon(size: CGFloat) -> NSImage {
@@ -89,77 +83,41 @@ func drawIcon(size: CGFloat) -> NSImage {
     NSColor.clear.setFill()
     NSRect(x: 0, y: 0, width: size, height: size).fill()
 
-    let shadow = NSShadow()
-    shadow.shadowColor = NSColor(calibratedWhite: 0, alpha: 0.22)
-    shadow.shadowBlurRadius = scaled(34, scale)
-    shadow.shadowOffset = NSSize(width: 0, height: scaled(-16, scale))
+    // macOS-style squircle with a soft contact shadow.
+    let appShape = roundedRect(x: 96, y: 96, width: 832, height: 832, radius: 186, scale: scale)
 
-    let appShape = roundedRect(x: 72, y: 68, width: 880, height: 880, radius: 198, scale: scale)
+    let shadow = NSShadow()
+    shadow.shadowColor = NSColor(calibratedWhite: 0, alpha: 0.16)
+    shadow.shadowBlurRadius = scaled(26, scale)
+    shadow.shadowOffset = NSSize(width: 0, height: scaled(-12, scale))
     NSGraphicsContext.saveGraphicsState()
     shadow.set()
-    IconColor.peacock.setFill()
+    IconColor.topBackground.setFill()
     appShape.fill()
     NSGraphicsContext.restoreGraphicsState()
 
-    IconColor.peacock.setFill()
-    appShape.fill()
-    NSColor(calibratedWhite: 1, alpha: 0.18).setStroke()
+    // Soft vertical light gradient fill (white → faint grey).
+    NSGraphicsContext.saveGraphicsState()
+    appShape.addClip()
+    let gradient = NSGradient(starting: IconColor.bottomBackground, ending: IconColor.topBackground)
+    gradient?.draw(in: appShape, angle: 90)
+    NSGraphicsContext.restoreGraphicsState()
+
+    // Crisp grey rim so the light tile reads on light backgrounds.
+    IconColor.tileEdge.setStroke()
     appShape.lineWidth = scaled(3, scale)
     appShape.stroke()
 
-    let pageShadow = NSShadow()
-    pageShadow.shadowColor = NSColor(calibratedWhite: 0, alpha: 0.24)
-    pageShadow.shadowBlurRadius = scaled(24, scale)
-    pageShadow.shadowOffset = NSSize(width: scaled(5, scale), height: scaled(-12, scale))
+    // A page of text — a clean "reader" mark.
+    fillRoundedRect(x: 352, y: 286, width: 320, height: 452, radius: 54, color: IconColor.glyph, scale: scale)
 
-    let page = roundedRect(x: 372, y: 226, width: 420, height: 558, radius: 48, scale: scale)
-    NSGraphicsContext.saveGraphicsState()
-    pageShadow.set()
-    IconColor.paper.setFill()
-    page.fill()
-    NSGraphicsContext.restoreGraphicsState()
-
-    IconColor.paper.setFill()
-    page.fill()
-
-    let fold = NSBezierPath()
-    fold.move(to: point(650, 784, scale))
-    fold.line(to: point(792, 642, scale))
-    fold.line(to: point(792, 784, scale))
-    fold.close()
-    IconColor.paperFold.setFill()
-    fold.fill()
-    IconColor.peacock.withAlphaComponent(0.42).setStroke()
-    fold.lineWidth = scaled(7, scale)
-    fold.stroke()
-
-    strokeLine(from: CGPoint(x: 548, y: 430), to: CGPoint(x: 710, y: 430), width: 22, color: IconColor.paperLine, scale: scale)
-    strokeLine(from: CGPoint(x: 548, y: 374), to: CGPoint(x: 686, y: 374), width: 22, color: IconColor.paperLine.withAlphaComponent(0.86), scale: scale)
-    strokeLine(from: CGPoint(x: 548, y: 318), to: CGPoint(x: 646, y: 318), width: 22, color: IconColor.peacockLight.withAlphaComponent(0.72), scale: scale)
-
-    let zDropShadow = NSShadow()
-    zDropShadow.shadowColor = NSColor(calibratedWhite: 0, alpha: 0.28)
-    zDropShadow.shadowBlurRadius = scaled(18, scale)
-    zDropShadow.shadowOffset = NSSize(width: scaled(5, scale), height: scaled(-10, scale))
-
-    let zEdge = zMarkPath(scale: scale, offsetX: 16, offsetY: -16)
-    IconColor.paperEdge.setFill()
-    zEdge.fill()
-
-    let z = zMarkPath(scale: scale)
-    NSGraphicsContext.saveGraphicsState()
-    zDropShadow.set()
-    IconColor.paper.setFill()
-    z.fill()
-    NSGraphicsContext.restoreGraphicsState()
-
-    IconColor.paper.setFill()
-    z.fill()
-    NSColor(calibratedWhite: 1, alpha: 0.74).setStroke()
-    z.lineWidth = scaled(4, scale)
-    z.stroke()
-
-    strokeLine(from: CGPoint(x: 282, y: 652), to: CGPoint(x: 622, y: 652), width: 3, color: NSColor(calibratedWhite: 1, alpha: 0.54), scale: scale)
+    let lineColor = NSColor.white
+    // Title line — a touch bolder and shorter.
+    strokeLine(from: CGPoint(x: 410, y: 650), to: CGPoint(x: 592, y: 650), width: 42, color: lineColor, scale: scale)
+    // Body lines.
+    strokeLine(from: CGPoint(x: 410, y: 558), to: CGPoint(x: 614, y: 558), width: 32, color: lineColor, scale: scale)
+    strokeLine(from: CGPoint(x: 410, y: 478), to: CGPoint(x: 614, y: 478), width: 32, color: lineColor, scale: scale)
+    strokeLine(from: CGPoint(x: 410, y: 398), to: CGPoint(x: 540, y: 398), width: 32, color: lineColor, scale: scale)
 
     image.unlockFocus()
     return image

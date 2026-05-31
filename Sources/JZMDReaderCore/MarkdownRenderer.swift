@@ -42,15 +42,20 @@ public struct MarkdownRenderer {
           * { box-sizing: border-box; }
 
           body {
-            margin: 0 auto;
-            max-width: 900px;
+            margin: 0;
+            max-width: none;
             min-height: 100vh;
-            padding: 58px 66px 78px;
+            padding: 52px 60px 96px;
             background: var(--page);
             color: var(--text);
             font-family: \(theme.bodyFont);
-            font-size: 16.5px;
-            line-height: 1.68;
+            font-size: 16px;
+            line-height: 1.72;
+            -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
+            font-feature-settings: "kern", "liga", "calt";
+            font-variant-ligatures: common-ligatures;
+            word-wrap: break-word;
           }
 
           ::selection {
@@ -141,7 +146,10 @@ public struct MarkdownRenderer {
             border-left: 4px solid var(--callout-color);
             border-radius: 8px;
             background: var(--callout-bg);
+            /* Callout backgrounds are always light tints, so keep text dark and legible on every theme. */
+            color: #353b45;
           }
+          .callout p { color: #353b45; }
           .callout-blue {
             --callout-color: var(--blue);
             --callout-bg: var(--blue-bg);
@@ -171,27 +179,29 @@ public struct MarkdownRenderer {
           }
 
           code {
-            padding: 0.13em 0.34em;
-            border: 1px solid var(--border-soft);
+            padding: 0.14em 0.4em;
             border-radius: 5px;
             background: var(--code-bg);
-            font-family: ui-monospace, "SF Mono", Menlo, Consolas, "PingFang SC", "Hiragino Sans GB", monospace;
-            font-size: 0.88em;
+            color: var(--accent-cool);
+            font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, "PingFang SC", "Hiragino Sans GB", monospace;
+            font-size: 0.86em;
           }
           pre {
             overflow: auto;
-            margin: 1.22em 0;
-            padding: 1em;
-            border: 1px solid var(--border);
-            border-radius: 8px;
+            margin: 1.4em 0;
+            padding: 1.05em 1.2em;
+            border: 1px solid var(--border-soft);
+            border-radius: 10px;
             background: var(--code-bg);
+            line-height: 1.6;
           }
           pre code {
             padding: 0;
             border: 0;
             background: transparent;
-            font-size: 0.86em;
-            line-height: 1.58;
+            color: var(--text);
+            font-size: 0.855em;
+            line-height: 1.6;
           }
 
           ul, ol { padding-left: 1.55em; }
@@ -202,31 +212,38 @@ public struct MarkdownRenderer {
             accent-color: var(--accent);
           }
 
+          .table-wrap {
+            margin: 1.5em 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+          }
           table {
             width: 100%;
-            margin: 1.4em 0;
             border-collapse: separate;
             border-spacing: 0;
-            overflow: hidden;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            font-size: 0.94em;
+            font-size: 0.93em;
+            line-height: 1.55;
           }
           th, td {
-            padding: 0.58em 0.68em;
+            padding: 0.64em 0.9em;
             border-right: 1px solid var(--border-soft);
             border-bottom: 1px solid var(--border-soft);
             vertical-align: top;
+            text-align: left;
           }
           th:last-child, td:last-child { border-right: 0; }
-          tr:last-child td { border-bottom: 0; }
-          th {
-            background: var(--accent-soft);
+          tbody tr:last-child td { border-bottom: 0; }
+          thead th {
+            background: var(--code-bg);
             color: var(--text);
-            text-align: left;
-            font-size: 0.82em;
-            font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+            font-weight: 640;
+            letter-spacing: 0.005em;
+            border-bottom: 1.5px solid var(--border);
+            white-space: nowrap;
           }
+          tbody tr:nth-child(even) td { background: rgba(130, 130, 130, 0.045); }
+          tbody tr:hover td { background: var(--accent-soft); }
 
           hr {
             border: 0;
@@ -458,12 +475,14 @@ private final class Parser {
         }.joined(separator: "\n")
 
         return """
+        <div class="table-wrap">
         <table>
           <thead><tr>\(headerHTML)</tr></thead>
           <tbody>
           \(bodyHTML)
           </tbody>
         </table>
+        </div>
         """
     }
 

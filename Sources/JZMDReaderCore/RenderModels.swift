@@ -77,19 +77,19 @@ public enum ReaderTheme: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .claude:
             return """
-            --bg: #fafaf7;
+            --bg: #f7f8fa;
             --page: #ffffff;
-            --text: #1f2937;
+            --text: #1f2530;
             --muted: #4b5563;
             --faint: #6b7280;
             --accent: #0eb0c9;
-            --accent-soft: #e6fafd;
-            --accent-cool: #005666;
-            --border: #e5e2d8;
-            --border-soft: #efede6;
-            --code-bg: #f4f6f7;
-            --panel: #fbfbf8;
-            --quote: #f3f4f6;
+            --accent-soft: #e3f7fb;
+            --accent-cool: #0a7d8f;
+            --border: #e4e7eb;
+            --border-soft: #eef0f3;
+            --code-bg: #f4f6f8;
+            --panel: #ffffff;
+            --quote: #f3f5f8;
             """
         case .github:
             return """
@@ -324,7 +324,7 @@ public enum ReaderTheme: String, CaseIterable, Identifiable, Hashable {
         case .mono:
             return #"ui-monospace, "SF Mono", Menlo, Consolas, "PingFang SC", monospace"#
         default:
-            return #"-apple-system", BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Helvetica Neue", Arial, sans-serif"#
+            return #"-apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Helvetica Neue", Arial, sans-serif"#
         }
     }
 }

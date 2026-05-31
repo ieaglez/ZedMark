@@ -8,34 +8,32 @@ struct ContentView: View {
     @ObservedObject var store: ReaderStore
 
     var body: some View {
-        HStack(spacing: 0) {
-            if store.showSidebar {
-                SidebarView(store: store)
-                    .frame(minWidth: 230, idealWidth: 270, maxWidth: 320)
+        VStack(spacing: 0) {
+            CommandBarView(store: store)
 
-                Rectangle()
-                    .fill(ReaderDesign.line)
-                    .frame(width: 1)
-            }
+            Rectangle()
+                .fill(ReaderDesign.line)
+                .frame(height: 1)
 
-            VStack(spacing: 0) {
-                CommandBarView(store: store)
+            HStack(spacing: 0) {
+                if store.showSidebar {
+                    SidebarView(store: store)
+                        .frame(minWidth: 230, idealWidth: 270, maxWidth: 320)
 
-                Rectangle()
-                    .fill(ReaderDesign.line)
-                    .frame(height: 1)
+                    Rectangle()
+                        .fill(ReaderDesign.line)
+                        .frame(width: 1)
+                }
 
-                HStack(spacing: 0) {
-                    ReaderWorkspaceView(store: store)
+                ReaderWorkspaceView(store: store)
 
-                    if store.showInspector {
-                        Rectangle()
-                            .fill(ReaderDesign.line)
-                            .frame(width: 1)
+                if store.showInspector {
+                    Rectangle()
+                        .fill(ReaderDesign.line)
+                        .frame(width: 1)
 
-                        InspectorView(store: store)
-                            .frame(minWidth: 278, idealWidth: 310, maxWidth: 350)
-                    }
+                    InspectorView(store: store)
+                        .frame(minWidth: 278, idealWidth: 310, maxWidth: 350)
                 }
             }
         }
@@ -62,14 +60,21 @@ private struct CommandBarView: View {
                 store.toggleSidebar()
             }
 
+            ReaderChromeButton(
+                systemName: "plus",
+                help: copy.openMarkdown
+            ) {
+                store.showOpenPanel()
+            }
+
             HStack(spacing: 7) {
-                Image(systemName: "terminal")
+                Image(systemName: "doc.text")
                     .font(.system(size: 11, weight: .regular))
                     .foregroundStyle(ReaderDesign.secondaryText)
 
                 Text(store.document?.title ?? AppCopy.appName)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(ReaderDesign.primaryText)
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundStyle(ReaderDesign.secondaryText)
                     .lineLimit(1)
             }
             .padding(.horizontal, 9)
@@ -79,18 +84,6 @@ private struct CommandBarView: View {
                 RoundedRectangle(cornerRadius: ReaderDesign.smallRadius)
                     .stroke(ReaderDesign.softLine, lineWidth: 1)
             )
-
-            ReaderStatusPill(
-                text: store.livePreviewEnabled ? copy.live : copy.manual,
-                systemName: store.livePreviewEnabled ? "circle.fill" : "pause.fill",
-                tint: store.livePreviewEnabled ? ReaderDesign.cool : ReaderDesign.secondaryText
-            )
-
-            Text(store.statusMessage)
-                .font(.system(size: 10, weight: .regular, design: .monospaced))
-                .foregroundStyle(ReaderDesign.tertiaryText)
-                .lineLimit(1)
-                .frame(maxWidth: 190, alignment: .leading)
 
             Spacer(minLength: 12)
 
@@ -201,7 +194,7 @@ private struct ZoomControlView: View {
                 store.resetZoom()
             } label: {
                 Text(store.zoomPercentText)
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .font(.system(size: 10.5, weight: .medium))
                     .foregroundStyle(ReaderDesign.secondaryText)
                     .frame(width: 44, height: 24)
                     .background(ReaderDesign.elevatedBackground, in: RoundedRectangle(cornerRadius: ReaderDesign.smallRadius))
