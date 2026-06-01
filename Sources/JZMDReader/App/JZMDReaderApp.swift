@@ -37,12 +37,6 @@ struct JZMDReaderApp: App {
             }
 
             CommandMenu(store.copy.readerMenu) {
-                Toggle(store.copy.livePreview, isOn: Binding(
-                    get: { store.livePreviewEnabled },
-                    set: { store.livePreviewEnabled = $0 }
-                ))
-                .disabled(store.document == nil)
-
                 Picker(store.copy.languageLabel, selection: Binding(
                     get: { store.language },
                     set: { store.language = $0 }

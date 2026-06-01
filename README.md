@@ -62,8 +62,8 @@ open ZedMark.xcodeproj
 The Xcode target uses:
 
 - Bundle ID: `com.jeffzhang.ZedMark`
-- Version: `0.1.0`
-- Build: `2`
+- Version: `1.0.2`
+- Build: `11`
 - App Sandbox enabled
 - User-selected file read/write access
 - App-scoped security-scoped bookmarks for recent files

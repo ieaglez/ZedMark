@@ -83,10 +83,6 @@ final class ReaderStore: ObservableObject {
         didSet { UserDefaults.standard.set(showInspector, forKey: Keys.showInspector) }
     }
 
-    @Published var livePreviewEnabled: Bool {
-        didSet { UserDefaults.standard.set(livePreviewEnabled, forKey: Keys.livePreviewEnabled) }
-    }
-
     @Published var showSidebar: Bool {
         didSet { UserDefaults.standard.set(showSidebar, forKey: Keys.showSidebar) }
     }
@@ -111,6 +107,11 @@ final class ReaderStore: ObservableObject {
     var canZoomIn: Bool { previewZoom < Self.maxZoom }
     var canZoomOut: Bool { previewZoom > Self.minZoom }
 
+    // The on-screen 100% renders the page at this scale, so the comfortable
+    // reading size is the default. Export keeps the document's native size.
+    static let zoomDisplayBase = 0.80
+    var effectiveZoom: Double { previewZoom * Self.zoomDisplayBase }
+
     private static let minZoom = 0.60
     private static let maxZoom = 2.00
     private static let zoomStep = 0.10
@@ -118,7 +119,6 @@ final class ReaderStore: ObservableObject {
     private enum Keys {
         static let theme = "JZMDReader.theme"
         static let showInspector = "JZMDReader.showInspector"
-        static let livePreviewEnabled = "JZMDReader.livePreviewEnabled"
         static let showSidebar = "ZedMark.showSidebar"
         static let previewZoom = "ZedMark.previewZoom"
         static let language = "ZedMark.language"
@@ -135,7 +135,6 @@ final class ReaderStore: ObservableObject {
         let defaults = UserDefaults.standard
         theme = ReaderTheme(rawValue: defaults.string(forKey: Keys.theme) ?? "") ?? .claude
         showInspector = defaults.object(forKey: Keys.showInspector) as? Bool ?? true
-        livePreviewEnabled = defaults.object(forKey: Keys.livePreviewEnabled) as? Bool ?? true
         showSidebar = defaults.object(forKey: Keys.showSidebar) as? Bool ?? true
         previewZoom = Self.clampedZoom(defaults.object(forKey: Keys.previewZoom) as? Double ?? 1.0)
         language = AppLanguage(rawValue: defaults.string(forKey: Keys.language) ?? "") ?? .english
@@ -208,7 +207,7 @@ final class ReaderStore: ObservableObject {
             renderDocument()
             addRecentFile(url)
             configureWatcher(for: url)
-            statusMessage = livePreviewEnabled ? copy.livePreviewOn : copy.loaded
+            statusMessage = copy.livePreviewOn
         } catch {
             presentError(message: copy.couldNotOpenFile, detail: error.localizedDescription)
         }
@@ -246,7 +245,7 @@ final class ReaderStore: ObservableObject {
 
     func dismissExportFeedback() {
         exportFeedback = .idle
-        statusMessage = document == nil ? copy.ready : (livePreviewEnabled ? copy.livePreviewOn : copy.loaded)
+        statusMessage = document == nil ? copy.ready : copy.livePreviewOn
     }
 
     func revealInFinder() {
@@ -425,12 +424,8 @@ final class ReaderStore: ObservableObject {
     private func configureWatcher(for url: URL) {
         watcher?.stop()
         watcher = FileWatcher(url: url) { [weak self] in
-            guard let self else { return }
-            if self.livePreviewEnabled {
-                self.reloadFromDisk(silent: true)
-            } else {
-                self.statusMessage = self.copy.externalChangesAvailable
-            }
+            // Preview always tracks the file on disk.
+            self?.reloadFromDisk(silent: true)
         }
     }
 

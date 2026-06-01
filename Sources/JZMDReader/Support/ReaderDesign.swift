@@ -1,19 +1,24 @@
 import SwiftUI
 
 enum ReaderDesign {
-    static let appBackground = Color(red: 0.980, green: 0.980, blue: 0.961)
-    static let sidebarBackground = Color(red: 0.949, green: 0.949, blue: 0.925)
-    static let panelBackground = Color(red: 0.988, green: 0.988, blue: 0.969)
+    // Bright, clean, cool-neutral canvas — white panels floating on a faint grey.
+    static let appBackground = Color(red: 0.972, green: 0.976, blue: 0.984)      // #f8f9fb
+    static let sidebarBackground = Color(red: 0.961, green: 0.965, blue: 0.973)  // #f5f6f8
+    static let panelBackground = Color.white                                     // #ffffff
     static let elevatedBackground = Color.white
-    static let line = Color(red: 0.890, green: 0.882, blue: 0.843)
-    static let softLine = Color(red: 0.929, green: 0.922, blue: 0.890)
-    static let primaryText = Color(red: 0.122, green: 0.161, blue: 0.216)
-    static let secondaryText = Color(red: 0.373, green: 0.400, blue: 0.451)
-    static let tertiaryText = Color(red: 0.541, green: 0.569, blue: 0.612)
-    static let accent = Color(red: 0.055, green: 0.690, blue: 0.788)
-    static let accentSoft = Color(red: 0.902, green: 0.984, blue: 0.992)
-    static let good = Color(red: 0.180, green: 0.490, blue: 0.196)
-    static let cool = Color(red: 0.000, green: 0.337, blue: 0.400)
+    static let line = Color(red: 0.898, green: 0.910, blue: 0.925)               // #e5e8ec
+    static let softLine = Color(red: 0.937, green: 0.945, blue: 0.957)           // #eff1f4
+    static let primaryText = Color(red: 0.106, green: 0.122, blue: 0.149)        // #1b1f26
+    static let secondaryText = Color(red: 0.353, green: 0.388, blue: 0.439)      // #5a6370
+    static let tertiaryText = Color(red: 0.561, green: 0.596, blue: 0.647)       // #8f98a5
+    static let accent = Color(red: 0.055, green: 0.690, blue: 0.788)             // #0eb0c9 brand teal
+    static let accentSoft = Color(red: 0.886, green: 0.969, blue: 0.984)         // #e2f7fb
+    static let good = Color(red: 0.133, green: 0.545, blue: 0.333)               // #228b55
+    static let cool = Color(red: 0.043, green: 0.510, blue: 0.588)               // #0b8296 deep teal
+
+    // Neutral fills for toolbar buttons — kept grey so colour stays meaningful.
+    static let hoverFill = Color(red: 0.945, green: 0.953, blue: 0.965)          // #f1f3f6
+    static let activeFill = Color(red: 0.910, green: 0.922, blue: 0.937)         // #e8ebef
 
     static let smallRadius: CGFloat = 7
     static let panelRadius: CGFloat = 10
@@ -32,12 +37,12 @@ struct ReaderChromeButton: View {
         Button(action: action) {
             Image(systemName: systemName)
                 .font(.system(size: 12, weight: .regular))
-                .foregroundStyle(isDisabled ? ReaderDesign.tertiaryText : (isActive ? ReaderDesign.cool : ReaderDesign.cool.opacity(0.82)))
+                .foregroundStyle(iconColor)
                 .frame(width: 24, height: 24)
                 .background(background)
                 .overlay(
                     RoundedRectangle(cornerRadius: ReaderDesign.smallRadius)
-                        .stroke(isActive ? ReaderDesign.accent.opacity(0.22) : ReaderDesign.softLine.opacity(0.75), lineWidth: isHovering || isActive ? 1 : 0)
+                        .stroke(ReaderDesign.line.opacity(0.8), lineWidth: isHovering || isActive ? 1 : 0)
                 )
         }
         .buttonStyle(.plain)
@@ -46,9 +51,15 @@ struct ReaderChromeButton: View {
         .onHover { isHovering = $0 }
     }
 
+    private var iconColor: Color {
+        if isDisabled { return ReaderDesign.tertiaryText }
+        if isActive { return ReaderDesign.primaryText }
+        return ReaderDesign.secondaryText
+    }
+
     private var background: Color {
-        if isActive { return ReaderDesign.accentSoft.opacity(0.46) }
-        if isHovering { return ReaderDesign.elevatedBackground.opacity(0.82) }
+        if isActive { return ReaderDesign.activeFill }
+        if isHovering { return ReaderDesign.hoverFill }
         return .clear
     }
 }
@@ -63,7 +74,7 @@ struct ReaderStatusPill: View {
             Image(systemName: systemName)
                 .font(.system(size: 7, weight: .regular))
             Text(text)
-                .font(.system(size: 10, weight: .regular, design: .monospaced))
+                .font(.system(size: 10.5, weight: .medium))
                 .lineLimit(1)
         }
         .foregroundStyle(tint)
@@ -87,7 +98,8 @@ struct ReaderSectionHeader: View {
                 .font(.system(size: 10, weight: .regular))
                 .foregroundStyle(ReaderDesign.tertiaryText)
             Text(title.uppercased())
-                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                .font(.system(size: 10, weight: .semibold))
+                .tracking(0.5)
                 .foregroundStyle(ReaderDesign.secondaryText)
             Spacer(minLength: 0)
         }

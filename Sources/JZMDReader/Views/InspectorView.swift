@@ -16,7 +16,7 @@ struct InspectorView: View {
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(ReaderDesign.primaryText)
                     Spacer()
-                    ReaderStatusPill(text: copy.light, systemName: "sun.max.fill", tint: ReaderDesign.accent)
+                    ReaderStatusPill(text: copy.light, systemName: "sun.max.fill", tint: ReaderDesign.secondaryText)
                 }
 
                 StatsSection(stats: store.renderResult.stats, copy: copy)
@@ -54,11 +54,13 @@ private struct MetricView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(value)
-                .font(.system(size: 19, weight: .semibold, design: .monospaced))
+                .font(.system(size: 20, weight: .semibold))
+                .monospacedDigit()
                 .foregroundStyle(ReaderDesign.primaryText)
                 .lineLimit(1)
             Text(title.uppercased())
-                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                .font(.system(size: 9.5, weight: .semibold))
+                .tracking(0.5)
                 .foregroundStyle(ReaderDesign.tertiaryText)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -161,14 +163,16 @@ private struct ExportFeedbackView: View {
                             .foregroundStyle(ReaderDesign.primaryText)
                         Spacer(minLength: 6)
                         Text(record.date.formatted(date: .omitted, time: .shortened))
-                            .font(.system(size: 10, weight: .regular, design: .monospaced))
+                            .font(.system(size: 10.5, weight: .regular))
+                            .monospacedDigit()
                             .foregroundStyle(ReaderDesign.tertiaryText)
                         FeedbackDismissButton(help: copy.dismiss, action: dismissAction)
                     }
 
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(copy.savedTo)
-                            .font(.system(size: 9.5, weight: .medium, design: .monospaced))
+                        Text(copy.savedTo.uppercased())
+                            .font(.system(size: 9, weight: .semibold))
+                            .tracking(0.5)
                             .foregroundStyle(ReaderDesign.tertiaryText)
                         Text(record.url.lastPathComponent)
                             .font(.system(size: 11, weight: .medium))
@@ -308,7 +312,8 @@ private struct ProofSection: View {
                                 Spacer(minLength: 8)
                                 if let line = item.line {
                                     Text("L\(line)")
-                                        .font(.system(size: 10, weight: .regular, design: .monospaced))
+                                        .font(.system(size: 10, weight: .regular))
+                                        .monospacedDigit()
                                         .foregroundStyle(ReaderDesign.tertiaryText)
                                 }
                             }

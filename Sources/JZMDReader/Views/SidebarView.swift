@@ -8,15 +8,9 @@ struct SidebarView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            SidebarHeader(store: store)
-
-            Rectangle()
-                .fill(ReaderDesign.line)
-                .frame(height: 1)
-
             RecentSection(store: store)
                 .padding(.horizontal, 10)
-                .padding(.top, 11)
+                .padding(.top, 12)
                 .padding(.bottom, 7)
 
             SidebarSectionDivider()
@@ -33,47 +27,6 @@ struct SidebarView: View {
     }
 }
 
-private struct SidebarHeader: View {
-    @ObservedObject var store: ReaderStore
-
-    var body: some View {
-        let copy = store.copy
-
-        HStack(spacing: 9) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 7)
-                    .fill(ReaderDesign.elevatedBackground)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 7)
-                            .stroke(ReaderDesign.softLine, lineWidth: 1)
-                    )
-                Text("ZM")
-                    .font(.system(size: 10.5, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(ReaderDesign.cool)
-            }
-            .frame(width: 26, height: 26)
-
-            VStack(alignment: .leading, spacing: 1) {
-                Text(AppCopy.appName)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(ReaderDesign.primaryText)
-                Text(copy.sidebarSubtitle)
-                    .font(.system(size: 10, weight: .regular, design: .monospaced))
-                    .foregroundStyle(ReaderDesign.secondaryText)
-            }
-
-            Spacer(minLength: 8)
-
-            ReaderChromeButton(systemName: "plus", help: copy.openMarkdown) {
-                store.showOpenPanel()
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(ReaderDesign.panelBackground)
-    }
-}
-
 private struct RecentSection: View {
     @ObservedObject var store: ReaderStore
     @State private var showingAllRecent = false
@@ -87,7 +40,8 @@ private struct RecentSection: View {
                     .font(.system(size: 10, weight: .regular))
                     .foregroundStyle(ReaderDesign.tertiaryText)
                 Text(copy.recent.uppercased())
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .font(.system(size: 10, weight: .semibold))
+                    .tracking(0.5)
                     .foregroundStyle(ReaderDesign.secondaryText)
                 Spacer(minLength: 0)
 
@@ -95,7 +49,7 @@ private struct RecentSection: View {
                     Button(copy.all) {
                         showingAllRecent = true
                     }
-                    .font(.system(size: 9.5, weight: .medium, design: .monospaced))
+                    .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(ReaderDesign.cool)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
@@ -218,32 +172,36 @@ private struct OutlineSection: View {
             if store.renderResult.headings.isEmpty {
                 EmptySidebarText(copy.noHeadings)
             } else {
-                VStack(spacing: 3) {
+                VStack(spacing: 1) {
                     ForEach(store.renderResult.headings) { heading in
                         SidebarRowButton(
                             isSelected: store.selectedHeadingID == heading.id,
                             action: { store.selectHeading(heading) }
                         ) {
-                            Text("H\(heading.level)")
-                                .font(.system(size: 9.5, weight: .medium, design: .monospaced))
-                                .foregroundStyle(ReaderDesign.secondaryText)
-                                .frame(width: 22)
-                                .padding(.leading, CGFloat(max(heading.level - 1, 0)) * 8)
-
                             Text(heading.title)
-                                .font(.system(size: 11.5, weight: .regular))
-                                .foregroundStyle(ReaderDesign.primaryText)
+                                .font(.system(size: 12, weight: heading.level <= 1 ? .medium : .regular))
+                                .foregroundStyle(outlineColor(for: heading.level))
                                 .lineLimit(1)
+                                .padding(.leading, CGFloat(max(heading.level - 1, 0)) * 13)
 
-                            Spacer(minLength: 0)
+                            Spacer(minLength: 6)
 
-                            Text("L\(heading.line)")
-                                .font(.system(size: 9.5, weight: .regular, design: .monospaced))
-                                .foregroundStyle(ReaderDesign.tertiaryText)
+                            Text("\(heading.line)")
+                                .font(.system(size: 9.5, weight: .regular))
+                                .monospacedDigit()
+                                .foregroundStyle(ReaderDesign.tertiaryText.opacity(0.7))
                         }
                     }
                 }
             }
+        }
+    }
+
+    private func outlineColor(for level: Int) -> Color {
+        switch level {
+        case 1: return ReaderDesign.primaryText
+        case 2: return ReaderDesign.secondaryText
+        default: return ReaderDesign.tertiaryText
         }
     }
 }
