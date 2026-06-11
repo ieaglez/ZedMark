@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(JZMDReaderCore)
+import JZMDReaderCore
+#endif
 
 enum AppLanguage: String, CaseIterable, Identifiable, Hashable {
     case english
@@ -20,13 +23,6 @@ struct AppCopy {
     static let appName = "ZedMark"
 
     var language: AppLanguage
-
-    var sidebarSubtitle: String {
-        switch language {
-        case .english: return "markdown reader"
-        case .simplifiedChinese: return "Markdown 阅读器"
-        }
-    }
 
     var emptySubtitle: String {
         switch language {
@@ -103,20 +99,6 @@ struct AppCopy {
         switch language {
         case .english: return "Dismiss"
         case .simplifiedChinese: return "关闭"
-        }
-    }
-
-    var live: String {
-        switch language {
-        case .english: return "live"
-        case .simplifiedChinese: return "实时"
-        }
-    }
-
-    var manual: String {
-        switch language {
-        case .english: return "manual"
-        case .simplifiedChinese: return "手动"
         }
     }
 
@@ -204,13 +186,6 @@ struct AppCopy {
         }
     }
 
-    var light: String {
-        switch language {
-        case .english: return "light"
-        case .simplifiedChinese: return "浅色"
-        }
-    }
-
     var stats: String {
         switch language {
         case .english: return "Stats"
@@ -264,13 +239,6 @@ struct AppCopy {
         switch language {
         case .english: return "Reader"
         case .simplifiedChinese: return "阅读器"
-        }
-    }
-
-    var livePreview: String {
-        switch language {
-        case .english: return "Live Preview"
-        case .simplifiedChinese: return "实时预览"
         }
     }
 
@@ -351,13 +319,6 @@ struct AppCopy {
         switch language {
         case .english: return "Live preview on"
         case .simplifiedChinese: return "实时预览已开启"
-        }
-    }
-
-    var loaded: String {
-        switch language {
-        case .english: return "Loaded"
-        case .simplifiedChinese: return "已载入"
         }
     }
 
@@ -459,10 +420,77 @@ struct AppCopy {
         }
     }
 
-    var externalChangesAvailable: String {
+    var find: String {
         switch language {
-        case .english: return "External changes available"
-        case .simplifiedChinese: return "外部文件已有更新"
+        case .english: return "Find in Document"
+        case .simplifiedChinese: return "在文档中查找"
+        }
+    }
+
+    var findPlaceholder: String {
+        switch language {
+        case .english: return "Find"
+        case .simplifiedChinese: return "查找"
+        }
+    }
+
+    var findNext: String {
+        switch language {
+        case .english: return "Next match"
+        case .simplifiedChinese: return "下一个"
+        }
+    }
+
+    var findPrevious: String {
+        switch language {
+        case .english: return "Previous match"
+        case .simplifiedChinese: return "上一个"
+        }
+    }
+
+    var copyHTMLMenu: String {
+        switch language {
+        case .english: return "Copy as HTML"
+        case .simplifiedChinese: return "复制为 HTML"
+        }
+    }
+
+    var copiedHTML: String {
+        switch language {
+        case .english: return "HTML copied"
+        case .simplifiedChinese: return "HTML 已复制"
+        }
+    }
+
+    var grantFolderAccess: String {
+        switch language {
+        case .english: return "Grant Folder Access..."
+        case .simplifiedChinese: return "授权文件夹访问..."
+        }
+    }
+
+    var imagesNeedAccess: String {
+        switch language {
+        case .english: return "Some images need folder access"
+        case .simplifiedChinese: return "部分图片需要文件夹访问权限"
+        }
+    }
+
+    func proofTitle(_ kind: ProofDiagnostic.Kind) -> String {
+        switch (kind, language) {
+        case (.repeatedWord, .english): return "Repeated word"
+        case (.repeatedWord, .simplifiedChinese): return "重复词"
+        case (.longSentence, .english): return "Long sentence"
+        case (.longSentence, .simplifiedChinese): return "长句"
+        case (.taskMarker, .english): return "Task marker"
+        case (.taskMarker, .simplifiedChinese): return "待办标记"
+        }
+    }
+
+    func longSentenceDetail(_ count: String) -> String {
+        switch language {
+        case .english: return "\(count) words"
+        case .simplifiedChinese: return "\(count) 个词/字"
         }
     }
 }

@@ -37,7 +37,12 @@ final class PDFExporter: NSObject, WKNavigationDelegate {
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         webView.evaluateJavaScript("Math.max(document.body.scrollHeight, document.documentElement.scrollHeight)") { [weak self] result, _ in
-            guard let self, let destination = self.destination else { return }
+            guard let self else { return }
+            guard let destination = self.destination else {
+                self.completion?(.failure(ExportError.missingWebView))
+                self.cleanup()
+                return
+            }
             let measuredHeight: CGFloat
             if let value = result as? Double {
                 measuredHeight = CGFloat(value)

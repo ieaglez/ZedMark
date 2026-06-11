@@ -5,15 +5,19 @@ ZedMark is a native macOS Markdown reader and preview app inspired by Marked. It
 ## Current features
 
 - Open or drag in `.md`, `.markdown`, `.mdown`, and text files
-- Live preview reloads when the source file changes on disk
-- Collapsible sidebar with recent files and heading outline
+- Live preview reloads when the source file changes on disk, keeping your scroll position (atomic saves from editors are handled)
+- Remembers the reading position per file and restores it on reopen
+- Find in document with `Command F`: highlighted matches, match counter, next/previous
+- Collapsible sidebar with recent files and a heading outline that follows your scroll position
+- Local images render inline (data-URI inlining; folder access can be granted for sandboxed builds)
+- Syntax highlighting in fenced code blocks for common languages
+- Markdown extras: footnotes, table column alignment, YAML front matter rendered as a metadata card, callouts, task lists, highlights
 - Reader zoom controls, including `Command +`, `Command -`, and `Command 0`
 - Reader themes: Claude, GitHub, Notion, Paper, Misty, Lapis, Solarized, Nord, Catppuccin, Alucard, Academic, Carbon, Warm Parchment, and Mono
-- Markdown canvas colors change with the selected reader theme
 - English and Simplified Chinese UI, defaulting to English
-- Document stats: words, lines, headings, and estimated reading time
-- Lightweight proofing checks for repeated words, long sentences, and TODO markers
-- Export rendered preview to HTML or PDF, with export status and Finder reveal action
+- CJK-aware document stats: words, lines, headings, and estimated reading time
+- Lightweight proofing checks for repeated words, long sentences (including Chinese punctuation), and TODO markers
+- Export rendered preview to HTML or PDF, or copy the HTML to the clipboard
 - Open the source file in the default editor or reveal it in Finder
 
 ## Run
@@ -62,8 +66,8 @@ open ZedMark.xcodeproj
 The Xcode target uses:
 
 - Bundle ID: `com.jeffzhang.ZedMark`
-- Version: `1.0.2`
-- Build: `11`
+- Version: `1.0.3`
+- Build: `12`
 - App Sandbox enabled
 - User-selected file read/write access
 - App-scoped security-scoped bookmarks for recent files

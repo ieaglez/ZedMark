@@ -6,12 +6,48 @@ public struct MarkdownRenderResult: Equatable {
     public var stats: DocumentStats
     public var diagnostics: [ProofDiagnostic]
 
+    public init(
+        html: String,
+        headings: [MarkdownHeading],
+        stats: DocumentStats,
+        diagnostics: [ProofDiagnostic]
+    ) {
+        self.html = html
+        self.headings = headings
+        self.stats = stats
+        self.diagnostics = diagnostics
+    }
+
     public static let empty = MarkdownRenderResult(
         html: MarkdownRenderer.emptyHTML(theme: .claude),
         headings: [],
         stats: .empty,
         diagnostics: []
     )
+}
+
+/// Theme-independent parse output, so switching themes can restyle the
+/// cached body without re-parsing the whole document.
+public struct MarkdownParseResult: Equatable {
+    public var body: String
+    public var headings: [MarkdownHeading]
+    public var stats: DocumentStats
+    public var diagnostics: [ProofDiagnostic]
+    public var needsFolderAccessForImages: Bool
+
+    public init(
+        body: String,
+        headings: [MarkdownHeading],
+        stats: DocumentStats,
+        diagnostics: [ProofDiagnostic],
+        needsFolderAccessForImages: Bool
+    ) {
+        self.body = body
+        self.headings = headings
+        self.stats = stats
+        self.diagnostics = diagnostics
+        self.needsFolderAccessForImages = needsFolderAccessForImages
+    }
 }
 
 public struct MarkdownHeading: Identifiable, Hashable {
@@ -39,14 +75,15 @@ public struct DocumentStats: Equatable {
 
 public struct ProofDiagnostic: Identifiable, Equatable {
     public enum Kind: String {
-        case repeatedWord = "Repeated word"
-        case longSentence = "Long sentence"
-        case taskMarker = "Task marker"
+        case repeatedWord
+        case longSentence
+        case taskMarker
     }
 
     public var id: String
     public var kind: Kind
-    public var title: String
+    /// Raw payload: the repeated word, the marker line, or the unit count
+    /// for long sentences. Display titles are localized by the UI layer.
     public var detail: String
     public var line: Int?
 }
@@ -267,6 +304,10 @@ public enum ReaderTheme: String, CaseIterable, Identifiable, Hashable {
             --code-bg: #111419;
             --panel: #1e2228;
             --quote: #20262d;
+            --tok-comment: #7f8792;
+            --tok-string: #8ad79c;
+            --tok-number: #f2c178;
+            --tok-keyword: #79c5e8;
             """
         case .warmParchment:
             return """

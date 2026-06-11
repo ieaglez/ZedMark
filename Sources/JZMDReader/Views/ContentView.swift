@@ -144,6 +144,8 @@ private struct CommandBarView: View {
             Menu {
                 Button(copy.exportHTML) { store.exportHTML() }
                 Button(copy.exportPDF) { store.exportPDF() }
+                Divider()
+                Button(copy.copyHTMLMenu) { store.copyHTML() }
             } label: {
                 Image(systemName: "square.and.arrow.up")
                     .font(.system(size: 12, weight: .regular))

@@ -10,7 +10,9 @@ struct JZMDReaderApp: App {
     @StateObject private var store = ReaderStore()
 
     var body: some Scene {
-        WindowGroup(AppCopy.appName, id: "main") {
+        // A single shared store means a single window: a second window would
+        // just mirror the same document.
+        Window(AppCopy.appName, id: "main") {
             ContentView(store: store)
                 .frame(minWidth: 980, minHeight: 640)
         }
@@ -33,6 +35,20 @@ struct JZMDReaderApp: App {
                     store.exportPDF()
                 }
                 .keyboardShortcut("p", modifiers: [.command, .shift])
+                .disabled(store.document == nil)
+
+                Button(store.copy.copyHTMLMenu) {
+                    store.copyHTML()
+                }
+                .keyboardShortcut("c", modifiers: [.command, .shift])
+                .disabled(store.document == nil)
+            }
+
+            CommandGroup(after: .textEditing) {
+                Button(store.copy.find) {
+                    store.showFindBar()
+                }
+                .keyboardShortcut("f")
                 .disabled(store.document == nil)
             }
 
@@ -61,6 +77,11 @@ struct JZMDReaderApp: App {
                     store.reloadFromDisk()
                 }
                 .keyboardShortcut("r")
+                .disabled(store.document == nil)
+
+                Button(store.copy.grantFolderAccess) {
+                    store.grantImageFolderAccess()
+                }
                 .disabled(store.document == nil)
 
                 Button(store.copy.toggleInspector) {
