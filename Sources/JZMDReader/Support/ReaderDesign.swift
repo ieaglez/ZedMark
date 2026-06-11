@@ -64,30 +64,6 @@ struct ReaderChromeButton: View {
     }
 }
 
-struct ReaderStatusPill: View {
-    var text: String
-    var systemName: String
-    var tint: Color = ReaderDesign.good
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: systemName)
-                .font(.system(size: 7, weight: .regular))
-            Text(text)
-                .font(.system(size: 10.5, weight: .medium))
-                .lineLimit(1)
-        }
-        .foregroundStyle(tint)
-        .padding(.horizontal, 7)
-        .padding(.vertical, 3)
-        .background(tint.opacity(0.07), in: RoundedRectangle(cornerRadius: 999))
-        .overlay(
-            RoundedRectangle(cornerRadius: 999)
-                .stroke(tint.opacity(0.14), lineWidth: 1)
-        )
-    }
-}
-
 struct ReaderSectionHeader: View {
     var title: String
     var systemName: String

@@ -66,16 +66,29 @@ final class ReaderStore: ObservableObject {
     @Published var document: MarkdownDocument?
     @Published var renderResult: MarkdownRenderResult = .empty
     @Published var selectedHeadingID: String?
+    @Published var activeHeadingID: String?
     @Published var recentFiles: [RecentFile] = []
     @Published var statusMessage = AppCopy(language: .english).ready
     @Published var exportFeedback: ExportFeedback = .idle
     @Published var lastExport: ExportRecord?
     @Published var isDropTargeted = false
+    @Published var imagesNeedFolderAccess = false
+
+    @Published var isFindBarVisible = false
+    @Published var findQuery = "" {
+        didSet {
+            guard oldValue != findQuery else { return }
+            pushFind(.update)
+        }
+    }
+    @Published private(set) var findRequest: PreviewFindRequest?
+    @Published private(set) var findCurrent = 0
+    @Published private(set) var findTotal = 0
 
     @Published var theme: ReaderTheme {
         didSet {
             UserDefaults.standard.set(theme.rawValue, forKey: Keys.theme)
-            renderDocument()
+            applyThemeToCachedParse()
         }
     }
 
@@ -99,7 +112,10 @@ final class ReaderStore: ObservableObject {
     }
 
     @Published var language: AppLanguage {
-        didSet { UserDefaults.standard.set(language.rawValue, forKey: Keys.language) }
+        didSet {
+            UserDefaults.standard.set(language.rawValue, forKey: Keys.language)
+            statusMessage = document == nil ? copy.ready : copy.livePreviewOn
+        }
     }
 
     var copy: AppCopy { AppCopy(language: language) }
@@ -123,13 +139,26 @@ final class ReaderStore: ObservableObject {
         static let previewZoom = "ZedMark.previewZoom"
         static let language = "ZedMark.language"
         static let recentFiles = "JZMDReader.recentFiles"
+        static let scrollPositions = "ZedMark.scrollPositions"
+        static let folderBookmarks = "ZedMark.imageFolderBookmarks"
     }
 
     private let renderer = MarkdownRenderer()
+    private let renderQueue = DispatchQueue(label: "com.jeffzhang.ZedMark.render", qos: .userInitiated)
+    private var parseGeneration = 0
+    private var cachedParse: MarkdownParseResult?
     private var watcher: FileWatcher?
     private var pdfExporter: PDFExporter?
     private var activeSecurityScopedURL: URL?
+    private var activeFolderScopeURL: URL?
     private var observers: [NSObjectProtocol] = []
+    private var findGeneration = 0
+    private var scrollPositions: [String: Double] = [:]
+    private var persistScrollWork: DispatchWorkItem?
+    private var folderBookmarks: [String: Data] = [:]
+
+    /// Restore target for the most recently opened document.
+    private(set) var restoreScrollY: Double = 0
 
     init() {
         let defaults = UserDefaults.standard
@@ -139,13 +168,19 @@ final class ReaderStore: ObservableObject {
         previewZoom = Self.clampedZoom(defaults.object(forKey: Keys.previewZoom) as? Double ?? 1.0)
         language = AppLanguage(rawValue: defaults.string(forKey: Keys.language) ?? "") ?? .english
         statusMessage = copy.ready
+        scrollPositions = defaults.dictionary(forKey: Keys.scrollPositions) as? [String: Double] ?? [:]
+        folderBookmarks = defaults.dictionary(forKey: Keys.folderBookmarks) as? [String: Data] ?? [:]
         loadRecentFiles()
+        pruneScrollPositions()
         observeAppEvents()
     }
 
     deinit {
         watcher?.stop()
+        persistScrollWork?.cancel()
+        persistScrollPositions()
         activeSecurityScopedURL?.stopAccessingSecurityScopedResource()
+        activeFolderScopeURL?.stopAccessingSecurityScopedResource()
         observers.forEach { NotificationCenter.default.removeObserver($0) }
     }
 
@@ -200,10 +235,13 @@ final class ReaderStore: ObservableObject {
 
         do {
             activateSecurityScope(for: url)
+            activateFolderScopeIfBookmarked(for: url)
             let text = try readText(url: url)
             let modified = modificationDate(for: url)
             document = MarkdownDocument(url: url, text: text, lastModified: modified)
             selectedHeadingID = nil
+            activeHeadingID = nil
+            restoreScrollY = scrollPositions[url.standardizedFileURL.path] ?? 0
             renderDocument()
             addRecentFile(url)
             configureWatcher(for: url)
@@ -415,10 +453,189 @@ final class ReaderStore: ObservableObject {
 
     private func renderDocument() {
         guard let document else {
+            cachedParse = nil
+            imagesNeedFolderAccess = false
             renderResult = .empty
             return
         }
-        renderResult = renderer.render(markdown: document.text, theme: theme)
+
+        parseGeneration += 1
+        let generation = parseGeneration
+        let text = document.text
+        let theme = self.theme
+        let base = baseURL
+        let renderer = self.renderer
+
+        // Parsing (and image inlining) runs off the main thread; a generation
+        // counter drops stale results when the document changes mid-flight.
+        renderQueue.async { [weak self] in
+            let parsed = renderer.parse(markdown: text, baseURL: base)
+            let html = MarkdownRenderer.documentHTML(body: parsed.body, theme: theme)
+            DispatchQueue.main.async {
+                guard let self, generation == self.parseGeneration else { return }
+                self.cachedParse = parsed
+                self.imagesNeedFolderAccess = parsed.needsFolderAccessForImages
+                self.renderResult = MarkdownRenderResult(
+                    html: html,
+                    headings: parsed.headings,
+                    stats: parsed.stats,
+                    diagnostics: parsed.diagnostics
+                )
+                if parsed.needsFolderAccessForImages {
+                    self.statusMessage = self.copy.imagesNeedAccess
+                }
+            }
+        }
+    }
+
+    /// Theme switches restyle the cached parse instead of re-parsing.
+    private func applyThemeToCachedParse() {
+        guard let parsed = cachedParse else {
+            renderDocument()
+            return
+        }
+        renderResult = MarkdownRenderResult(
+            html: MarkdownRenderer.documentHTML(body: parsed.body, theme: theme),
+            headings: parsed.headings,
+            stats: parsed.stats,
+            diagnostics: parsed.diagnostics
+        )
+    }
+
+    // MARK: - Preview state (scroll position + outline tracking)
+
+    func handlePreviewState(scrollY: Double, headingID: String?) {
+        if activeHeadingID != headingID {
+            activeHeadingID = headingID
+        }
+        guard let path = document?.url.standardizedFileURL.path else { return }
+        scrollPositions[path] = scrollY
+        schedulePersistScrollPositions()
+    }
+
+    private func schedulePersistScrollPositions() {
+        persistScrollWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            self?.persistScrollPositions()
+        }
+        persistScrollWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: work)
+    }
+
+    private func persistScrollPositions() {
+        UserDefaults.standard.set(scrollPositions, forKey: Keys.scrollPositions)
+    }
+
+    private func pruneScrollPositions() {
+        guard scrollPositions.count > 80 else { return }
+        let keep = Set(recentFiles.map { $0.url.standardizedFileURL.path })
+        scrollPositions = scrollPositions.filter { keep.contains($0.key) }
+        persistScrollPositions()
+    }
+
+    // MARK: - Find in document
+
+    func showFindBar() {
+        guard document != nil else { return }
+        isFindBarVisible = true
+        if !findQuery.isEmpty {
+            pushFind(.update)
+        }
+    }
+
+    func hideFindBar() {
+        isFindBarVisible = false
+        if findQuery.isEmpty {
+            pushFind(.clear)
+        } else {
+            findQuery = ""
+        }
+    }
+
+    func findNext() {
+        pushFind(.next)
+    }
+
+    func findPrevious() {
+        pushFind(.previous)
+    }
+
+    func handleFindResult(current: Int, total: Int) {
+        findCurrent = current
+        findTotal = total
+    }
+
+    private func pushFind(_ action: PreviewFindRequest.Action) {
+        findGeneration += 1
+        let resolvedAction: PreviewFindRequest.Action = findQuery.isEmpty && action == .update ? .clear : action
+        findRequest = PreviewFindRequest(query: findQuery, action: resolvedAction, generation: findGeneration)
+        if resolvedAction == .clear {
+            findCurrent = 0
+            findTotal = 0
+        }
+    }
+
+    // MARK: - Copy HTML
+
+    func copyHTML() {
+        guard document != nil else { return }
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(renderResult.html, forType: .html)
+        pasteboard.setString(renderResult.html, forType: .string)
+        statusMessage = copy.copiedHTML
+    }
+
+    // MARK: - Image folder access (sandbox)
+
+    /// The sandbox only grants access to the opened file, so sibling images
+    /// need a one-time folder grant, remembered via security-scoped bookmark.
+    func grantImageFolderAccess() {
+        guard let folder = baseURL else { return }
+        let panel = NSOpenPanel()
+        panel.title = copy.grantFolderAccess
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.directoryURL = folder
+
+        guard panel.runModal() == .OK, let chosen = panel.url else { return }
+
+        if let bookmark = try? chosen.bookmarkData(
+            options: [.withSecurityScope],
+            includingResourceValuesForKeys: nil,
+            relativeTo: nil
+        ) {
+            folderBookmarks[chosen.standardizedFileURL.path] = bookmark
+            UserDefaults.standard.set(folderBookmarks, forKey: Keys.folderBookmarks)
+        }
+        activateFolderScope(chosen)
+        renderDocument()
+    }
+
+    private func activateFolderScope(_ url: URL) {
+        activeFolderScopeURL?.stopAccessingSecurityScopedResource()
+        activeFolderScopeURL = nil
+        if url.startAccessingSecurityScopedResource() {
+            activeFolderScopeURL = url
+        }
+    }
+
+    private func activateFolderScopeIfBookmarked(for fileURL: URL) {
+        let folderPath = fileURL.standardizedFileURL.deletingLastPathComponent().path
+        for (path, bookmark) in folderBookmarks {
+            guard folderPath == path || folderPath.hasPrefix(path + "/") else { continue }
+            var isStale = false
+            if let url = try? URL(
+                resolvingBookmarkData: bookmark,
+                options: [.withSecurityScope],
+                relativeTo: nil,
+                bookmarkDataIsStale: &isStale
+            ) {
+                activateFolderScope(url)
+                return
+            }
+        }
     }
 
     private func configureWatcher(for url: URL) {

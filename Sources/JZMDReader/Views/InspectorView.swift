@@ -11,13 +11,9 @@ struct InspectorView: View {
 
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                HStack {
-                    Text(copy.inspector)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(ReaderDesign.primaryText)
-                    Spacer()
-                    ReaderStatusPill(text: copy.light, systemName: "sun.max.fill", tint: ReaderDesign.secondaryText)
-                }
+                Text(copy.inspector)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(ReaderDesign.primaryText)
 
                 StatsSection(stats: store.renderResult.stats, copy: copy)
                 ExportSection(store: store)
@@ -306,7 +302,7 @@ private struct ProofSection: View {
                     ForEach(diagnostics) { item in
                         VStack(alignment: .leading, spacing: 5) {
                             HStack {
-                                Text(item.title)
+                                Text(copy.proofTitle(item.kind))
                                     .font(.system(size: 12, weight: .semibold))
                                     .foregroundStyle(ReaderDesign.primaryText)
                                 Spacer(minLength: 8)
@@ -317,7 +313,7 @@ private struct ProofSection: View {
                                         .foregroundStyle(ReaderDesign.tertiaryText)
                                 }
                             }
-                            Text(item.detail)
+                            Text(item.kind == .longSentence ? copy.longSentenceDetail(item.detail) : item.detail)
                                 .font(.system(size: 11, weight: .regular))
                                 .foregroundStyle(ReaderDesign.secondaryText)
                                 .lineLimit(2)

@@ -17,10 +17,16 @@ struct SidebarView: View {
                 .padding(.horizontal, 10)
                 .padding(.vertical, 8)
 
-            ScrollView {
-                OutlineSection(store: store)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 10)
+            ScrollViewReader { proxy in
+                ScrollView {
+                    OutlineSection(store: store)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 10)
+                }
+                .onChange(of: store.activeHeadingID) { headingID in
+                    guard let headingID else { return }
+                    proxy.scrollTo(headingID)
+                }
             }
         }
         .background(ReaderDesign.sidebarBackground)
@@ -175,7 +181,7 @@ private struct OutlineSection: View {
                 VStack(spacing: 1) {
                     ForEach(store.renderResult.headings) { heading in
                         SidebarRowButton(
-                            isSelected: store.selectedHeadingID == heading.id,
+                            isSelected: store.activeHeadingID == heading.id || store.selectedHeadingID == heading.id,
                             action: { store.selectHeading(heading) }
                         ) {
                             Text(heading.title)
@@ -191,6 +197,7 @@ private struct OutlineSection: View {
                                 .monospacedDigit()
                                 .foregroundStyle(ReaderDesign.tertiaryText.opacity(0.7))
                         }
+                        .id(heading.id)
                     }
                 }
             }

@@ -13,9 +13,17 @@ struct ReaderWorkspaceView: View {
             } else {
                 WebPreview(
                     html: store.renderResult.html,
-                    baseURL: store.baseURL,
+                    documentPath: store.document?.url.standardizedFileURL.path,
                     scrollTarget: store.selectedHeadingID,
-                    zoom: store.effectiveZoom
+                    zoom: store.effectiveZoom,
+                    restoreScrollY: store.restoreScrollY,
+                    findRequest: store.findRequest,
+                    onState: { [weak store] y, heading in
+                        store?.handlePreviewState(scrollY: y, headingID: heading)
+                    },
+                    onFindResult: { [weak store] current, total in
+                        store?.handleFindResult(current: current, total: total)
+                    }
                 )
                 .clipShape(RoundedRectangle(cornerRadius: ReaderDesign.panelRadius))
                 .overlay(
@@ -34,6 +42,74 @@ struct ReaderWorkspaceView: View {
                     .allowsHitTesting(false)
             }
         }
+        .overlay(alignment: .topTrailing) {
+            if store.isFindBarVisible, store.document != nil {
+                FindBar(store: store)
+                    .padding(.top, 24)
+                    .padding(.trailing, 28)
+            }
+        }
+    }
+}
+
+private struct FindBar: View {
+    @ObservedObject var store: ReaderStore
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        let copy = store.copy
+
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 11, weight: .regular))
+                .foregroundStyle(ReaderDesign.tertiaryText)
+
+            TextField(copy.findPlaceholder, text: Binding(
+                get: { store.findQuery },
+                set: { store.findQuery = $0 }
+            ))
+            .textFieldStyle(.plain)
+            .font(.system(size: 12))
+            .frame(width: 168)
+            .focused($isFocused)
+            .onSubmit { store.findNext() }
+            .onExitCommand { store.hideFindBar() }
+
+            Text(store.findTotal > 0 ? "\(store.findCurrent)/\(store.findTotal)" : "0/0")
+                .font(.system(size: 10.5, weight: .regular))
+                .monospacedDigit()
+                .foregroundStyle(ReaderDesign.tertiaryText)
+                .frame(minWidth: 38)
+
+            ReaderChromeButton(
+                systemName: "chevron.up",
+                help: copy.findPrevious,
+                isDisabled: store.findTotal == 0
+            ) {
+                store.findPrevious()
+            }
+
+            ReaderChromeButton(
+                systemName: "chevron.down",
+                help: copy.findNext,
+                isDisabled: store.findTotal == 0
+            ) {
+                store.findNext()
+            }
+
+            ReaderChromeButton(systemName: "xmark", help: copy.close) {
+                store.hideFindBar()
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(ReaderDesign.panelBackground, in: RoundedRectangle(cornerRadius: 9))
+        .overlay(
+            RoundedRectangle(cornerRadius: 9)
+                .stroke(ReaderDesign.line, lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.10), radius: 14, x: 0, y: 8)
+        .onAppear { isFocused = true }
     }
 }
 
